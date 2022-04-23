@@ -1,4 +1,4 @@
-package alchyr;
+package duospire.util;
 
 import javassist.CtClass;
 import javassist.CtConstructor;
@@ -106,6 +106,7 @@ public class BytecodeTranslator {
 
     private void opToString(CodeIterator ci) throws BadBytecode {
         Object a, b, c, d;
+        boolean staticMethod = false;
         int index = ci.next();
         int op = ci.byteAt(index);
         String hexOp = Integer.toHexString(op);
@@ -588,9 +589,10 @@ public class BytecodeTranslator {
                 else
                     sb.append(putField).append(" [").append(cp.getFieldrefClassName(putFieldIndex)).append(']');
                 break;
+            case INVOKESTATIC: //A static method.
+                staticMethod = true;
             case INVOKEVIRTUAL: //Normally calling a method
             case INVOKESPECIAL: //Usually a super call
-            case INVOKESTATIC: //A static method.
             case INVOKEINTERFACE: //An interface method. Has two additional bytes of info, but they're not important for this.
                 int virtualMethIndex = uVal(index + 1);
                 String virtualMethName = cp.getMethodrefName(virtualMethIndex);
@@ -598,9 +600,7 @@ public class BytecodeTranslator {
                     sb.append("{METHOD NOT FOUND}");
                 }
                 else {
-                    sb.append(virtualMethName).append(" [").append(cp.getMethodrefClassName(virtualMethIndex)).append("] ");
-                    String virtualMethType = cp.getMethodrefType(virtualMethIndex);
-                    processDescriptor(virtualMethName, virtualMethType);
+                    processDescriptor(virtualMethName, cp.getMethodrefType(virtualMethIndex), staticMethod, cp.getMethodrefClassName(virtualMethIndex));
                 }
                 break;
             case INVOKEDYNAMIC:
@@ -725,9 +725,9 @@ public class BytecodeTranslator {
         return ci.s32bitAt(index);
     }
     private Object var(int index) {
-        if (index < 0 || index > vars.size())
+        if (index < 0)
             return UNDF;
-        return vars.get(index);
+        return vars.getOrDefault(index, UNDF);
     }
 
     private void push(Object val) {
@@ -784,6 +784,8 @@ public class BytecodeTranslator {
         popStr(popped);
     }
     private void popFormatted(String format, int amt) {
+        if (amt <= 0)
+            return;
         Object[] popped = new Object[amt];
         for (int i = amt - 1; i >= 0; --i) {
             popped[i] = stack.pop();
@@ -989,16 +991,15 @@ public class BytecodeTranslator {
             push(result);
     }
 
-    private void processDescriptor(String name, String descriptor) {
-        if (descriptor == null || descriptor.length() < 3)
-            return;
-        if (descriptor.equals("()V")) {
-            sb.append("void");
+    private void processDescriptor(String name, String descriptor, boolean isStatic, String className) {
+        if (descriptor == null || descriptor.length() < 3) {
+            sb.append(name).append(" [").append(className).append("]");
             return;
         }
+
         char c;
         int i = 1;
-        int params = 0;
+        int params = isStatic ? 0 : 1;
         outer:
         for (; i < descriptor.length(); ++i) { //First character is just opening parentheses
             c = descriptor.charAt(i);
@@ -1027,9 +1028,26 @@ public class BytecodeTranslator {
                     break;
             }
         }
-        popAmt(params);
+
+        StringBuilder format = new StringBuilder(isStatic ? "" : "%s.");
+        format.append(name).append(" [").append(className).append('.').append(name).append("] ");
+        int n = isStatic ? 0 : 1;
+        if (n < params)
+            format.append('(');
+        for (; n < params - 1; ++n)
+            format.append("%s, ");
+        if (n < params)
+            format.append("%s) ");
+
+        if (params == 0) {
+            sb.append(format);
+        }
+        else {
+            popFormatted(format.toString(), params);
+        }
+
         if (i < descriptor.length() && descriptor.charAt(i) != 'V') {
-            StringBuilder arr = new StringBuilder();
+            format.setLength(0);
             for (; i < descriptor.length(); ++i) { //First character is just opening parentheses
                 c = descriptor.charAt(i);
                 switch (c) {
@@ -1039,32 +1057,33 @@ public class BytecodeTranslator {
                             push(UNDF);
                             return;
                         }
-                        push(descriptor.substring(start, descriptor.length() - 1) + arr);
+                        push(descriptor.substring(start, descriptor.length() - 1) + format);
                         return;
                     case 'B':
-                        push("byte" + arr); return;
+                        push("byte" + format); return;
                     case 'C':
-                        push("char" + arr); return;
+                        push("char" + format); return;
                     case 'D':
-                        push("double" + arr); return;
+                        push("double" + format); return;
                     case 'F':
-                        push("float" + arr); return;
+                        push("float" + format); return;
                     case 'I':
-                        push("int" + arr); return;
+                        push("int" + format); return;
                     case 'J':
-                        push("long" + arr); return;
+                        push("long" + format); return;
                     case 'S':
-                        push("short" + arr); return;
+                        push("short" + format); return;
                     case 'Z':
-                        push("boolean" + arr); return;
+                        push("boolean" + format); return;
                     case '[':
-                        arr.append("[]");
+                        format.append("[]");
                         break;
                 }
             }
         }
         else {
-            sb.append("->");
+            //No return.
+            sb.append(params > 0 ? "-> void" : "void");
         }
     }
 
