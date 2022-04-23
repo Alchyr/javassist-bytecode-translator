@@ -47,14 +47,7 @@ public class BytecodeTranslator {
 
     private final StringBuilder sb;
 
-    private final IntedetermineDeque indeterminate = new IntedetermineDeque();
     private Deque<Object> stack = new IntedetermineDeque();
-    private void useIndeterminate() {
-        if (!stack.equals(indeterminate)) {
-            indeterminate.setSub(stack);
-            stack = indeterminate;
-        }
-    }
 
     private final Map<Integer, Object> vars = new HashMap<>();
 
@@ -459,78 +452,63 @@ public class BytecodeTranslator {
             case IFEQ:
                 popFormatted("if (%s == 0) go to ", 1);
                 sb.append(uVal(index + 1));
-                useIndeterminate();
                 break;
             case IFNE:
                 popFormatted("if (%s != 0) go to ", 1);
                 sb.append(uVal(index + 1));
-                useIndeterminate();
                 break;
             case IFLT:
                 popFormatted("if (%s < 0) go to ", 1);
                 sb.append(uVal(index + 1));
-                useIndeterminate();
                 break;
             case IFGE:
                 popFormatted("if (%s >= 0) go to ", 1);
                 sb.append(uVal(index + 1));
-                useIndeterminate();
                 break;
             case IFGT:
                 popFormatted("if (%s > 0) go to ", 1);
                 sb.append(uVal(index + 1));
-                useIndeterminate();
                 break;
             case IFLE:
                 popFormatted("if (%s <= 0) go to ", 1);
                 sb.append(uVal(index + 1));
-                useIndeterminate();
                 break;
             case IF_ICMPEQ:
             case IF_ACMPEQ:
                 popFormatted("if (%s == %s) go to ", 2);
                 sb.append(uVal(index + 1));
-                useIndeterminate();
                 break;
             case IF_ICMPNE:
             case IF_ACMPNE:
                 popFormatted("if (%s != %s) go to ", 2);
                 sb.append(uVal(index + 1));
-                useIndeterminate();
                 break;
             case IF_ICMPLT:
                 popFormatted("if (%s < %s) go to ", 2);
                 sb.append(uVal(index + 1));
-                useIndeterminate();
                 break;
             case IF_ICMPGE:
                 popFormatted("if (%s >= %s) go to ", 2);
                 sb.append(uVal(index + 1));
-                useIndeterminate();
                 break;
             case IF_ICMPGT:
                 popFormatted("if (%s > %s) go to ", 2);
                 sb.append(uVal(index + 1));
-                useIndeterminate();
                 break;
             case IF_ICMPLE:
                 popFormatted("if (%s <= %s) go to ", 2);
                 sb.append(uVal(index + 1));
-                useIndeterminate();
                 break;
             case GOTO:
                 sb.append("go to ").append(uVal(index + 1));
-                useIndeterminate();
                 break;
             case JSR: //Might want to implement this at some point?
             case RET:
                 sb.append("UNSUPPORTED");
-                useIndeterminate();
                 break;
             case TABLESWITCH: //Could use more work.
             case LOOKUPSWITCH:
                 endPopStr(stack.pop());
-                useIndeterminate();
                 break;
             case IRETURN:
             case LRETURN:
@@ -697,12 +675,10 @@ public class BytecodeTranslator {
             case IFNULL:
                 popFormatted("if (%s == null) go to ", 1);
                 sb.append(uVal(index + 1));
-                useIndeterminate();
                 break;
             case IFNONNULL:
                 popFormatted("if (%s != null) go to ", 1);
                 sb.append(uVal(index + 1));
-                useIndeterminate();
                 break;
             case GOTO_W:
                 break;
