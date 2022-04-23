@@ -157,7 +157,7 @@ public class BytecodeTranslator {
             case LALOAD:        push(readArr(long.class)); break;
             case FALOAD:        push(readArr(float.class)); break;
             case DALOAD:        push(readArr(double.class)); break;
-            case AALOAD:        push(readArr(Object[].class)); break;
+            case AALOAD:        push(readArr(Object.class)); break;
             case BALOAD:        push(readArr(byte.class)); break;
             case CALOAD:        push(readArr(char.class)); break;
             case SALOAD:        push(readArr(short.class)); break;
@@ -529,9 +529,8 @@ public class BytecodeTranslator {
                     stack.push(UNDF);
                 }
                 else {
-                    sb.append("Field ").append(getStaticField).append(' ');
+                    sb.append(cp.getFieldrefClassName(getStaticIndex)).append('.').append(getStaticField).append(' ');
                     push(getStaticField);
-                    sb.append(" [").append(cp.getFieldrefClassName(getStaticIndex)).append(']');
                 }
                 break;
             case PUTSTATIC:
@@ -1005,15 +1004,18 @@ public class BytecodeTranslator {
             }
         }
 
-        StringBuilder format = new StringBuilder(isStatic ? "" : "%s.");
-        format.append(name).append(" [").append(className).append('.').append(name).append("] ");
+        StringBuilder format = new StringBuilder(isStatic ? className : "%s");
+        format.append('.').append(name);
+        if (!isStatic) {
+            sb.append('[').append(className).append('.').append(name).append("] ");
+        }
         int n = isStatic ? 0 : 1;
         if (n < params)
             format.append('(');
         for (; n < params - 1; ++n)
             format.append("%s, ");
         if (n < params)
-            format.append("%s) ");
+            format.append("%s)");
 
         if (params == 0) {
             sb.append(format);
@@ -1021,6 +1023,7 @@ public class BytecodeTranslator {
         else {
             popFormatted(format.toString(), params);
         }
+        sb.append(' ');
 
         if (i < descriptor.length() && descriptor.charAt(i) != 'V') {
             format.setLength(0);
@@ -1057,9 +1060,11 @@ public class BytecodeTranslator {
                 }
             }
         }
+        else if (params == 0) {
+            sb.append("void"); //no params, no return (no change to stack)
+        }
         else {
-            //No return.
-            sb.append(params > 0 ? "-> void" : "void");
+            sb.append("->"); //Removed params from stack
         }
     }
 
