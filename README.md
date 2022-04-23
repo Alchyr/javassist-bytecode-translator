@@ -2,12 +2,12 @@
 A basic bytecode translator for CtMethod/CtConstructor.
 
 Not translated:
-jsr*
-ret*
-tableswitch
-lookupswitch
-invokedynamic
-wide
-jsr_w*
+ * jsr*
+ * ret*
+ * tableswitch
+ * lookupswitch
+ * invokedynamic
+ * wide
+ * jsr_w*
 
-* not planning on implementing
+\* not planning on implementing
